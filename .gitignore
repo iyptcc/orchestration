@@ -1,0 +1,9 @@
+.vagrant
+
+Vagrantfile
+
+django-old
+
+/*.log
+
+.idea

@@ -1,0 +1,96 @@
+version: "2"
+
+services:
+
+    db:
+        image: postgres #define the image to get
+        restart: always
+        volumes:
+            - pgvolume:/var/lib/postgresql/data
+            - ./postgres/docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d
+        env_file: env
+
+    redis:
+        restart: always
+        image: redis:latest
+        expose:
+            - "6379"
+
+    rabbitmq:
+
+        restart: always
+        image: rabbitmq
+        env_file: env
+
+    celery:
+        restart: always
+        # Docker hack to wait until Postgres is up, then run stuff.
+        command: /usr/local/bin/celery -A cc.celery worker
+        build: ./django-cc/
+        volumes:
+            - webmedia:/data/glue-media
+            - /var/run/docker.sock:/var/run/docker.sock
+            - ./tex_share:/data/tex_share
+        depends_on:
+            - db
+            - web
+            - rabbitmq
+        env_file: env
+        environment:
+            IN_DOCKER: 1
+
+    web:
+        restart: always
+
+        # Docker hack to wait until Postgres is up, then run stuff.
+        command: /bin/sh -c "while ! nc -w 1 -z db 5432; do sleep 0.1; done; /usr/bin/python3 manage.py migrate; /usr/bin/python3 manage.py collectstatic --noinput; /usr/local/bin/gunicorn cc.wsgi:application -w 21 --timeout 120 -b :8000"
+        build: ./django-cc/
+        volumes:
+            - webstatic:/data/django/static
+            - "./.git/modules/django:/data/django-git:ro"
+            - webmedia:/data/glue-media
+            - ./dbbackup:/data/dbbackup
+        depends_on:
+            - db
+        env_file: env
+        environment:
+            IN_DOCKER: 1
+
+    socket:
+        restart: always
+
+        # Docker hack to wait until Postgres is up, then run stuff.
+        command: /bin/sh -c "while ! nc -w 1 -z db 5432; do sleep 0.1; done; /usr/local/bin/daphne -b 0.0.0.0 -p 8000 --proxy-headers --access-log - cc.asgi:application"
+        build: ./django-cc/
+        volumes:
+            - "./.git/modules/django:/data/django-git:ro"
+        depends_on:
+            - db
+            - redis
+        env_file: env
+        environment:
+            IN_DOCKER: 1
+
+    nginx-django:
+        restart: always
+        container_name: nginx-django
+        build: ./nginx/
+        volumes:
+            - ./maintenance:/data/maintenance
+        #ports:
+        #    - "80:80"
+        expose:
+            - "80"
+        volumes_from:
+            - web
+        depends_on:
+            - web
+
+    xelatex:
+        build: ./xelatex/
+
+volumes:
+    pgvolume:  #declare a volume named pgvolume
+    web:
+    webmedia:
+    webstatic:

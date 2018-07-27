@@ -1,0 +1,3 @@
+[submodule "django-cc"]
+	path = django-cc
+	url = https://gitlab.com/iypt/django-cc.git

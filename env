@@ -1,0 +1,10 @@
+DB_NAME=iyptcc
+DB_USER=cc
+DB_PASS=secret_password1_here
+# DB_SERVICE=postgres
+DB_SERVICE=db
+DB_PORT=5432
+POSTGRES_PASSWORD=secret_password2_here
+RABBITMQ_DEFAULT_USER=iyptcc
+RABBITMQ_DEFAULT_PASS=secret_password3_here
+RABBITMQ_SERVICE=rabbitmq
