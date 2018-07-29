@@ -10,7 +10,7 @@ Here some brief instructions to get everything running:
 ## Clone everything
 
 ```
-git clone ssh://git@git.nlogn.org:2223/CC/docker.git
+git clone https://gitlab.com/iypt/docker.git
 git submodule update --init --recursive
 ```
 
@@ -29,5 +29,9 @@ It can be inspected with
 ```
 docker volume ls
 ```
+
+## Contact
+
+For any questions regarding contribution, vulnerability disclosure or installation, please contact [fe-iyptcc@nlogn.org](mailto:fe-iyptcc@nlogn.org).
 
 
