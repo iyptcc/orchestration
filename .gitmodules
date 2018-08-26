@@ -1,3 +1,3 @@
-[submodule "django-cc"]
-	path = django-cc
-	url = https://gitlab.com/iypt/django-cc.git
+[submodule "iypt-cc"]
+	path = iypt-cc
+	url = https://github.com/iyptcc/iypt-cc.git
