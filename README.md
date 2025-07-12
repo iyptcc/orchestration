@@ -12,7 +12,7 @@ Most of the features also work with podman, except rendering of PDFs, as they re
 ## Clone everything
 
 ```
-git clone https://gitlab.com/iypt/docker.git
+git clone https://github.com/iyptcc/orchestration.git
 git submodule update --init --recursive
 ```
 
