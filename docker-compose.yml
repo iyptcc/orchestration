@@ -1,26 +1,25 @@
-version: "2"
 
 services:
-
+    # upgrade with https://hub.docker.com/r/tianon/postgres-upgrade/tags 
     db:
-        image: postgres #define the image to get
+        image: docker.io/library/postgres:14 #define the image to get
         restart: always
         volumes:
-            - pgvolume:/var/lib/postgresql/data
+            - pgvolume14:/var/lib/postgresql/data
             - ./postgres/docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d
         env_file: env
+        networks:
+            - cc
+
 
     redis:
         restart: always
-        image: redis:latest
+        image: docker.io/library/redis:latest
         expose:
             - "6379"
+        networks:
+            - cc
 
-    rabbitmq:
-
-        restart: always
-        image: rabbitmq
-        env_file: env
 
     celery:
         restart: always
@@ -29,15 +28,16 @@ services:
         build: ./iypt-cc/
         volumes:
             - webmedia:/data/glue-media
-            - /var/run/docker.sock:/var/run/docker.sock
+            #- /var/run/docker.sock:/var/run/docker.sock
             - ./tex_share:/data/tex_share
         depends_on:
             - db
             - web
-            - rabbitmq
         env_file: env
         environment:
             IN_DOCKER: 1
+        networks:
+            - cc
 
     web:
         restart: always
@@ -47,14 +47,15 @@ services:
         build: ./iypt-cc/
         volumes:
             - webstatic:/data/django/static
-            - "./.git/modules/iypt-cc:/data/django-git:ro"
             - webmedia:/data/glue-media
-            - ./dbbackup:/data/dbbackup
+            - ./backup:/data/dbbackup
         depends_on:
             - db
         env_file: env
         environment:
             IN_DOCKER: 1
+        networks:
+            - cc
 
     socket:
         restart: always
@@ -62,35 +63,49 @@ services:
         # Docker hack to wait until Postgres is up, then run stuff.
         command: /bin/sh -c "while ! nc -w 1 -z db 5432; do sleep 0.1; done; /usr/local/bin/daphne -b 0.0.0.0 -p 8000 --proxy-headers --access-log - cc.asgi:application"
         build: ./iypt-cc/
-        volumes:
-            - "./.git/modules/iypt-cc:/data/django-git:ro"
         depends_on:
             - db
             - redis
         env_file: env
         environment:
             IN_DOCKER: 1
+        networks:
+            - cc
 
     nginx-django:
         restart: always
-        container_name: nginx-django
-        build: ./nginx/
+        image: nginx
+        #volumes:
+        #    - ./maintenance:/data/maintenance
+        ports:
+            - "8000:80"
         volumes:
-            - ./maintenance:/data/maintenance
-        #ports:
-        #    - "80:80"
-        expose:
-            - "80"
-        volumes_from:
-            - web
+            - "./nginx.d:/etc/nginx/conf.d"
+            - webstatic:/data/django/static
+            - webmedia:/data/glue-media
         depends_on:
             - web
+        labels:
+            - "traefik.enable=true"
+            - "traefik.http.routers.cc.rule=Host(`cc.your-domain.tld`)"
+            - "traefik.http.routers.cc.service=cc"
+            - "traefik.http.services.cc.loadbalancer.server.port=80"
+            - "traefik.http.routers.cc.entryPoints=websecure"
+            - "traefik.http.routers.cc.tls=true"
+            - "traefik.http.routers.cc.tls.certresolver=le"
+        networks:
+           cc:
 
     xelatex:
         build: ./xelatex/
+        command: sleep 1000d
 
 volumes:
-    pgvolume:  #declare a volume named pgvolume
+    pgvolume14:  #declare a volume named pgvolume
     web:
     webmedia:
     webstatic:
+
+networks:
+  # Internal network for communication with PostgreSQL/MySQL
+  cc:
